@@ -1,6 +1,7 @@
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 import tkinter
+from tkinter.filedialog import askopenfilename
 
 
 def receive():
@@ -26,6 +27,29 @@ def send(event=None):  # event is passed by binders.
 def on_closing(event=None):
     my_msg.set("{quit}")
     send()
+    
+
+def send_file(filename):
+    BUFFER_SIZE = 1024
+    s = socket(AF_INET,SOCK_STREAM)
+    s.connect((TCP_IP, TCP_PORT))
+    
+    f = open(filename, 'rb')
+    while True:
+        l = f.read(BUFFER_SIZE)
+        while(l):
+            s.send(l)
+            l = f.read(BUFFER_SIZE)
+        if not l:
+            f.close()
+            s.close()
+            break
+    
+    
+
+def openFileDialog(event=None):
+    filename = askopenfilename()
+    send_file(filename)
 
 
 top = tkinter.Tk()
@@ -48,11 +72,18 @@ entry_field.pack()
 send_button = tkinter.Button(top, text="Send", command=send)
 send_button.pack()
 
+file_dialog_button = tkinter.Button(top, text="Choose File", command=openFileDialog)
+file_dialog_button.pack()
+
 top.protocol("WM_DELETE_WINDOW", on_closing)
 
 #----Now comes the sockets part----
 HOST = input('Enter host: ')
 PORT = input('Enter port: ')
+TCP_IP = HOST
+TCP_PORT = int(PORT) + 1
+
+
 if not PORT:
     PORT = 33000
 else:

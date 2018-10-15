@@ -41,22 +41,61 @@ def broadcast(msg, prefix=""):  # prefix is for name identification.
     for sock in clients:
         sock.send(bytes(prefix, "utf8")+msg)
 
+
+def receive_file(sock, filename):
+    with open(filename, 'wb') as f:
+        while True:
+            data = sock.recv(BUFSIZ)
+            if not data:
+                f.close()
+                break
+            f.write(data)
+        print("File Received")
+    
+    sock.close()
+    
+    
+
+
+def file_accept_incoming_connections():
+    while True:
+        client, client_address = FILE_SERVER.accept()
+        filename = "received_file"  # Take from sender
+        Thread(target=receive_file, args=(client, filename,)).start()
+        
+
+
         
 clients = {}
 addresses = {}
 
 HOST = ''
 PORT = 22020
+FILE_PORT = 22021
+
 BUFSIZ = 1024
+
 ADDR = (HOST, PORT)
+FILE_ADDR = (HOST, FILE_PORT)
 
 SERVER = socket(AF_INET, SOCK_STREAM)
 SERVER.bind(ADDR)
 
+FILE_SERVER = socket(AF_INET, SOCK_STREAM)
+FILE_SERVER.bind(FILE_ADDR)
+
 if __name__ == "__main__":
     SERVER.listen(5)
+    FILE_SERVER.listen(5)
     print("Waiting for connection...")
     ACCEPT_THREAD = Thread(target=accept_incoming_connections)
+    FILE_ACCEPT_THREAD = Thread(target=file_accept_incoming_connections)
+    
     ACCEPT_THREAD.start()
+    FILE_ACCEPT_THREAD.start()
+    
     ACCEPT_THREAD.join()
+    FILE_ACCEPT_THREAD.join()
+    
     SERVER.close()
+    FILE_SERVER.close()
