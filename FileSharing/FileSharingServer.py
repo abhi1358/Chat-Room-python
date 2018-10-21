@@ -19,7 +19,7 @@ class ClientThread(Thread):
     def run(self):
         print('run method running')
         #filename = 'file.txt'
-        filename = 'vid.m4v'
+        filename = 'pg.cpp'
         f = open(filename,'rb')
         print("file opened")
         while True:
