@@ -3,80 +3,53 @@ from Crypto.Cipher import AES
 
 class AESImplement:
 
-	def generateKey():
-		#16 byte key
-		key = ''.join(chr(random.randint(0, 0xFF)) for i in range(16))
-		fd = open("AES_key.pem", "wb")
+    def generateKey():
+    #16 byte key
+        AES_key = ''.join(chr(random.randint(0, 0xFF)) for i in range(16))
+        fd = open("AES_key.pem", "wb")
         fd.write(AES_key)
         fd.close()
-		return key
+        return AES_key
 
-#################################################################################################################
-	def encrypt_file(key, in_filename, out_filename=None, chunksize=64*1024):
-    """ Encrypts a file using AES (CBC mode) with the
-        given key.
+    def encrypt_file(key, in_filename, out_filename=None, chunksize=64*1024):
+        if not out_filename:
+            out_filename = in_filename + '.enc'
 
-        key:
-            The encryption key - a string that must be
-            either 16, 24 or 32 bytes long. Longer keys
-            are more secure.
+        iv = ''.join(chr(random.randint(0, 0xFF)) for i in range(16))
+        encryptor = AES.new(key, AES.MODE_CBC, iv)
+        filesize = os.path.getsize(in_filename)
 
-        in_filename:
-            Name of the input file
+        with open(in_filename, 'rb') as infile:
+            with open(out_filename, 'wb') as outfile:
+                outfile.write(struct.pack('<Q', filesize))
+                outfile.write(iv)
 
-        out_filename:
-            If None, '<in_filename>.enc' will be used.
+                while True:
+                    chunk = infile.read(chunksize)
+                    if len(chunk) == 0:
+                        break
+                    elif len(chunk) % 16 != 0:
+                        chunk += ' ' * (16 - len(chunk) % 16)
 
-        chunksize:
-            Sets the size of the chunk which the function
-            uses to read and encrypt the file. Larger chunk
-            sizes can be faster for some files and machines.
-            chunksize must be divisible by 16.
-    """
-    if not out_filename:
-        out_filename = in_filename + '.enc'
+                    outfile.write(encryptor.encrypt(chunk))
 
-    iv = ''.join(chr(random.randint(0, 0xFF)) for i in range(16))
-    encryptor = AES.new(key, AES.MODE_CBC, iv)
-    filesize = os.path.getsize(in_filename)
+    def decrypt_file(key, in_filename, out_filename=None, chunksize=24*1024):
 
-    with open(in_filename, 'rb') as infile:
-        with open(out_filename, 'wb') as outfile:
-            outfile.write(struct.pack('<Q', filesize))
-            outfile.write(iv)
+        if not out_filename:
+            out_filename = os.path.splitext(in_filename)[0]
 
-            while True:
-                chunk = infile.read(chunksize)
-                if len(chunk) == 0:
-                    break
-                elif len(chunk) % 16 != 0:
-                    chunk += ' ' * (16 - len(chunk) % 16)
+        with open(in_filename, 'rb') as infile:
+            origsize = struct.unpack('<Q', infile.read(struct.calcsize('Q')))[0]
+            iv = infile.read(16)
+            decryptor = AES.new(key, AES.MODE_CBC, iv)
 
-                outfile.write(encryptor.encrypt(chunk))
+            with open(out_filename, 'wb') as outfile:
+                while True:
+                    chunk = infile.read(chunksize)
+                    if len(chunk) == 0:
+                        break
+                    outfile.write(decryptor.decrypt(chunk))
 
-#####################################################################################################
+                outfile.truncate(origsize)
 
-	def decrypt_file(key, in_filename, out_filename=None, chunksize=24*1024):
-    """ Decrypts a file using AES (CBC mode) with the
-        given key. Parameters are similar to encrypt_file,
-        with one difference: out_filename, if not supplied
-        will be in_filename without its last extension
-        (i.e. if in_filename is 'aaa.zip.enc' then
-        out_filename will be 'aaa.zip')
-    """
-    if not out_filename:
-        out_filename = os.path.splitext(in_filename)[0]
-
-    with open(in_filename, 'rb') as infile:
-        origsize = struct.unpack('<Q', infile.read(struct.calcsize('Q')))[0]
-        iv = infile.read(16)
-        decryptor = AES.new(key, AES.MODE_CBC, iv)
-
-        with open(out_filename, 'wb') as outfile:
-            while True:
-                chunk = infile.read(chunksize)
-                if len(chunk) == 0:
-                    break
-                outfile.write(decryptor.decrypt(chunk))
-
-            outfile.truncate(origsize)
+key1 = generateKey()
